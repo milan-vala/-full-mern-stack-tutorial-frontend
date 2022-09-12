@@ -1,20 +1,36 @@
-import { useState } from "react";
 import { useWorkoutsContext } from "../hooks/useWorkoutsContext";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 
 const WorkoutFrom = () => {
   const { dispatch } = useWorkoutsContext();
-  const [title, setTitle] = useState("");
-  const [load, setLoad] = useState("");
-  const [reps, setReps] = useState("");
-  const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const formik = useFormik({
+    initialValues: {
+      title: "",
+      load: "",
+      reps: ""
+    },
+    validationSchema: Yup.object({
+      title: Yup.string().required("Title is required."),
+      load: Yup.number()
+        .typeError("Please enter numbers only.")
+        .required("Load is required.")
+        .nullable(),
+      reps: Yup.number()
+        .typeError("Please enter numbers only.")
+        .required("Reps is required.")
+        .nullable()
+    }),
+    onSubmit: () => {
+      handleSubmit();
+    }
+  })
 
-    const workout = { title, load, reps };
+  const handleSubmit = async () => {
     const response = await fetch("/api/workouts", {
       method: "POST",
-      body: JSON.stringify(workout),
+      body: JSON.stringify(formik.values),
       headers: {
         "Content-Type": "application/json"
       }
@@ -22,44 +38,84 @@ const WorkoutFrom = () => {
 
     const json = await response.json();
     if (!response.ok) {
-      setError(json.error);
+      console.log("Error: ", json.error);
     } else {
-      setTitle("");
-      setLoad("");
-      setReps("");
-      setError(null);
       console.log("new workout added", json);
       dispatch({ type: "CREATE_WORKOUT", payload: json });
     }
+    formik.resetForm();
   }
 
   return (
-    <form className="create" onSubmit={handleSubmit}>
+    <form className="create">
       <h3>Add a New Workout</h3>
 
-      <label>Exercise Title:</label>
-      <input
-        type="text"
-        onChange={(e) => setTitle(e.target.value)}
-        value={title}
-      />
+      <div>
+        <label>Exercise Title:</label>
+        <input
+          type="text"
+          name="title"
+          onChange={formik.handleChange}
+          onBlur={formik.onBlur}
+          value={formik.values.title}
+          style={{
+            border: formik.touched.title && formik.errors.title ? "1px solid red" : undefined,
+          }}
+        />
+        {(formik.errors.title && formik.touched.title) &&
+          <span className="error-text">
+            {formik.errors.title}
+          </span>
+        }
+      </div>
 
-      <label>Load (kg):</label>
-      <input
-        type="number"
-        onChange={(e) => setLoad(e.target.value)}
-        value={load}
-      />
+      <div>
+        <label>Load (kg):</label>
+        <input
+          type="text"
+          name="load"
+          onChange={formik.handleChange}
+          onBlur={formik.onBlur}
+          value={formik.values.load}
+          style={{
+            border: formik.touched.load && formik.errors.load ? "1px solid red" : undefined,
+          }}
+        />
+        {(formik.errors.load && formik.touched.load) &&
+          <span className="error-text">
+            {formik.errors.load}
+          </span>
+        }
+      </div>
 
-      <label>Reps (kg):</label>
-      <input
-        type="number"
-        onChange={(e) => setReps(e.target.value)}
-        value={reps}
-      />
+      <div>
+        <label>Reps (kg):</label>
+        <input
+          type="text"
+          name="reps"
+          onChange={formik.handleChange}
+          onBlur={formik.onBlur}
+          value={formik.values.reps}
+          style={{
+            border: formik.touched.reps && formik.errors.reps ? "1px solid red" : undefined,
+          }}
+        />
+        {(formik.errors.reps && formik.touched.reps) &&
+          <span className="error-text">
+            {formik.errors.reps}
+          </span>
+        }
+      </div>
 
-      <button>Add Workout</button>
-      {error && <div className="error">{error}</div>}
+      <button
+        type="submit"
+        onClick={(e) => {
+          e.preventDefault();
+          formik.handleSubmit()
+        }}
+      >
+        Add Workout
+      </button>
     </form>
   );
 };
